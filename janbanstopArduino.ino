@@ -14,7 +14,6 @@ const int DOUT = 4;
 const int CLK = 5;
 
 HX711 scale;
-float sum_kg = 0.0; // Variable to store cumulative weight
 
 Adafruit_PN532 nfc(SDA_PIN, SCL_PIN);
 
@@ -23,36 +22,28 @@ void setup(void) {
   scale.begin(DOUT, CLK);
   scale.set_scale(calibration_factor);
   scale.tare();
-
+  
   // Initialize the NFC module
   nfc.begin();
-
+  
   // Initialize Bluetooth communication
   bluetooth.begin(9600);
+  Serial.begin(9600);
 }
 
 void loop(void) {
   nfc.SAMConfig();
-
+  
   // Read the weight from the scale
   scale.set_scale(calibration_factor);
-  float weight_kg = scale.get_units(1); // Convert weight to kg
+  float weight_kg = scale.get_units(1); // 무게를 kg로 변환
 
   if (weight_kg >= 0) {
     Serial.print("Weight: ");
-    Serial.print(weight_kg, 1); // Print weight with 1 decimal place
-    Serial.println(" kg");
-
-    // Update cumulative weight
-    sum_kg += weight_kg;
-
-    // Print cumulative weight
-    Serial.print("Sum: ");
-    Serial.print(sum_kg, 1); // Print cumulative weight with 1 decimal place
+    Serial.print(weight_kg, 1); // 소수점 한 자리까지 출력
     Serial.println(" kg");
   } else {
-    weight_kg = 0.0;
-    Serial.print("Weight: 0.0 kg\n");
+    Serial.println("Error, unable to read weight.");
   }
 
   // Check for an NFC card
@@ -72,24 +63,18 @@ void loop(void) {
       }
     }
     Serial.println();
-
-    // Send weight and UID over Bluetooth
     
-    bluetooth.print("UID: ");
+    // Send weight and UID over Bluetooth
+    bluetooth.print("ID:");
     for (uint8_t i = 0; i < uidLength; i++) {
       bluetooth.print(uid[i]);
       if (i < uidLength - 1) {
         bluetooth.print(" ");
       }
     }
-    bluetooth.println();
+    bluetooth.print(", Weight:");
+    bluetooth.println(weight_kg, 1); // 무게를 kg로 출력
   }
-    bluetooth.print(" Weight: ");
-    bluetooth.print(weight_kg, 1); // Send weight with 1 decimal place
-    bluetooth.print(" kg, Sum: ");
-    bluetooth.print(sum_kg, 1); // Send cumulative weight with 1 decimal place
-    bluetooth.print(" kg");
-    bluetooth.println();
 
   delay(1000);
 }
